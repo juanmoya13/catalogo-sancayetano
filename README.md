@@ -28,6 +28,21 @@ No usar `npx supabase db push` sin `--remote`: ese comando intenta conectarse a 
 
 No se necesita una clave `service_role` para el funcionamiento de esta base. No se debe agregar al navegador ni versionar ningún secreto. La tabla `admin_users` queda vacía; el alta controlada del administrador se documentará al implementar el acceso administrativo.
 
+## Acceso administrativo
+
+1. En Supabase, crear manualmente el usuario inicial en **Authentication → Users** con un correo y una contraseña robusta. Deshabilitar el registro de usuarios públicos en la configuración de Auth.
+2. Copiar el UUID de ese usuario y ejecutar en el SQL Editor del proyecto de desarrollo:
+
+	```sql
+	insert into public.admin_users (user_id)
+	values ('UUID_DEL_USUARIO_CREADO');
+	```
+
+	Reemplazar el marcador por el UUID real. No insertar correos ni contraseñas en esta tabla o en el repositorio. Repetir el procedimiento solo desde un entorno confiable para autorizar otra cuenta.
+3. Abrir `/admin/login` e iniciar sesión. La aplicación comprueba la sesión y la función `is_admin()` antes de mostrar el panel.
+
+El proyecto no necesita `SUPABASE_SERVICE_ROLE_KEY`: la administración usa la sesión del usuario y las políticas RLS existentes. No habilitar registro público ni conceder permisos sobre `admin_users` a usuarios autenticados.
+
 ## Datos de prueba del catálogo
 
 El archivo `supabase/seed.sql` contiene categorías y productos ficticios para desarrollo. Contiene más de 24 productos activos para verificar la paginación y también un producto inactivo.
