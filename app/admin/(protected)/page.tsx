@@ -6,8 +6,18 @@ export default function AdminHomePage() {
       <p className="catalog-header__eyebrow">Panel de administración</p>
       <h1>Administración del catálogo</h1>
       <p className="admin-login-copy">
-        El acceso está protegido. Las herramientas de categorías y productos se incorporarán en sus próximas etapas.
+        Administrá productos, precios, disponibilidad y categorías del catálogo.
       </p>
+      <Link className="catalog-button" href="/admin/productos">
+        Administrar productos
+      </Link>
+      <br />
+      <br />
+      <Link className="catalog-button" href="/admin/categorias">
+        Administrar categorías
+      </Link>
+      <br />
+      <br />
       <Link className="catalog-button" href="/">
         Ver catálogo público
       </Link>

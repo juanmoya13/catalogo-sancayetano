@@ -22,11 +22,9 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
       </header>
       <div className="admin-workspace">
         <nav className="admin-navigation" aria-label="Administración">
-          <span className="admin-navigation__current" aria-current="page">
-            Inicio
-          </span>
-          <span aria-disabled="true">Categorías</span>
-          <span aria-disabled="true">Productos</span>
+          <Link href="/admin">Inicio</Link>
+          <Link href="/admin/categorias">Categorías</Link>
+          <Link href="/admin/productos">Productos</Link>
         </nav>
         {children}
       </div>

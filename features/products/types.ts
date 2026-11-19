@@ -20,3 +20,9 @@ export type PublicProductBatch = {
   total: number;
   hasMore: boolean;
 };
+
+export type ProductActionState = {
+  status: "idle" | "success" | "error";
+  message: string;
+  fieldErrors?: Partial<Record<"name" | "categoryId" | "price" | "saleUnit" | "isActive", string>>;
+};
