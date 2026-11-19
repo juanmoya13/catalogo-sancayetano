@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Autoservicio San Cayetano
 
-## Getting Started
+Catálogo online para consultar productos y precios, preparar un carrito y coordinar el pedido por WhatsApp.
 
-First, run the development server:
+## Requisitos
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Node.js compatible con Next.js 16.
+- npm.
+- Un proyecto Supabase Cloud. Para pruebas y desarrollo, usar un proyecto Cloud separado del de producción.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Configuración de la aplicación
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Instalar dependencias con `npm install`.
+2. Copiar `.env.example` a `.env.local` y completar `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` con los datos del proyecto Supabase Cloud seleccionado.
+3. Iniciar Next.js localmente con `npm run dev`; la aplicación local se conecta al proyecto Cloud indicado en `.env.local`.
+4. Abrir `http://localhost:3000/api/health/supabase`. Una respuesta `{"status":"ok"}` confirma que la aplicación consultó la tabla `categories`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Migraciones a Supabase Cloud
 
-## Learn More
+La base de datos del proyecto vive en Supabase Cloud. No hace falta iniciar Docker ni ejecutar `supabase start` para desarrollar la aplicación. La CLI de Supabase apunta al stack local por defecto, incluso cuando hay un proyecto remoto enlazado; por eso los comandos de base de datos deben incluir `--remote` explícitamente.
 
-To learn more about Next.js, take a look at the following resources:
+1. Autenticar la CLI con `npx supabase login` si todavía no está autenticada. El token de acceso de la CLI es distinto de `NEXT_PUBLIC_SUPABASE_ANON_KEY`; no guardarlo en el repositorio ni en variables `NEXT_PUBLIC_`.
+2. Enlazar este checkout al proyecto Cloud con `npx supabase link --project-ref <PROJECT_REF>`. El project ref se obtiene de la URL del proyecto en Supabase. Si la CLI solicita la contraseña de base de datos, ingresarla directamente en el terminal.
+3. Revisar el destino y las migraciones antes de aplicar cambios con `npx supabase db push --remote --dry-run`.
+4. Aplicar migraciones con `npx supabase db push --remote` únicamente después de verificar que el destino sea el proyecto Cloud correcto.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+No usar `npx supabase db push` sin `--remote`: ese comando intenta conectarse a PostgreSQL local (`127.0.0.1:54322`). No aplicar migraciones de desarrollo directamente al proyecto de producción; el dry-run de esta sesión identificó el proyecto enlazado como `production`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+No se necesita una clave `service_role` para el funcionamiento de esta base. No se debe agregar al navegador ni versionar ningún secreto. La tabla `admin_users` queda vacía; el alta controlada del administrador se documentará al implementar el acceso administrativo.
 
-## Deploy on Vercel
+## Comandos
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- `npm run dev`: servidor local.
+- `npm run lint`: ESLint.
+- `npm run typecheck`: chequeo TypeScript.
+- `npm run build`: build de producción.
+- `npm run start`: servidor de producción local.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Estructura inicial
+
+- `app/`: rutas, layout y estilos globales.
+- `lib/supabase/`: clientes de servidor y navegador y configuración pública.
+- `supabase/migrations/`: esquema, restricciones, triggers y políticas RLS versionadas.
+
+Las carpetas de funcionalidades y pruebas se incorporarán cuando cada integración las necesite.
