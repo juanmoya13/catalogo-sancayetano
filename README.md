@@ -28,6 +28,22 @@ No usar `npx supabase db push` sin `--remote`: ese comando intenta conectarse a 
 
 No se necesita una clave `service_role` para el funcionamiento de esta base. No se debe agregar al navegador ni versionar ningún secreto. La tabla `admin_users` queda vacía; el alta controlada del administrador se documentará al implementar el acceso administrativo.
 
+## Datos de prueba del catálogo
+
+El archivo `supabase/seed.sql` contiene categorías y productos ficticios para desarrollo. Contiene más de 24 productos activos para verificar la paginación y también un producto inactivo.
+
+Cargarlo solamente en el proyecto Supabase de desarrollo con:
+
+```bash
+npx supabase db query --remote --file supabase/seed.sql --yes
+```
+
+`db execute` no está disponible en la versión actual de Supabase CLI; el subcomando correcto es `db query --remote --file`.
+
+Antes de ejecutarlo, verifica que el proyecto mostrado por la CLI corresponda al proyecto de desarrollo. La opción `--yes` confirma explícitamente la ejecución SQL contra el proyecto remoto enlazado.
+
+El script usa identificadores fijos y `on conflict`, por lo que puede volver a ejecutarse para restaurar esos datos de prueba. No ejecutar el seed contra producción ni cargar datos ficticios en el catálogo real.
+
 ## Comandos
 
 - `npm run dev`: servidor local.
