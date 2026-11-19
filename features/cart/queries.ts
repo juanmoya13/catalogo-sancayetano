@@ -2,9 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import type { CartProduct } from "./types";
 
 export async function getCartProducts(productIds: string[]): Promise<CartProduct[]> {
-  const uniqueIds = [...new Set(productIds)].filter((id) =>
-    /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id)
-  );
+  const uniqueIds = [...new Set(productIds
+    .filter((id) => /^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$/i.test(id))
+    .map((id) => id.toLowerCase()))];
 
   if (uniqueIds.length === 0) return [];
 

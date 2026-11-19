@@ -11,7 +11,7 @@ Catálogo online para consultar productos y precios, preparar un carrito y coord
 ## Configuración de la aplicación
 
 1. Instalar dependencias con `npm install`.
-2. Copiar `.env.example` a `.env.local` y completar `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` con los datos del proyecto Supabase Cloud seleccionado.
+2. Copiar `.env.example` a `.env.local` y completar `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_ANON_KEY` con los datos del proyecto Supabase Cloud seleccionado, y `WHATSAPP_PHONE_NUMBER` con el número comercial en formato internacional, solo dígitos y código de país (sin `+`, espacios ni guiones).
 3. Iniciar Next.js localmente con `npm run dev`; la aplicación local se conecta al proyecto Cloud indicado en `.env.local`.
 4. Abrir `http://localhost:3000/api/health/supabase`. Una respuesta `{"status":"ok"}` confirma que la aplicación consultó la tabla `categories`.
 

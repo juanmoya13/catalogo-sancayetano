@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { MAX_CART_LINES } from "@/features/cart/constants";
 import { getCartProducts } from "@/features/cart/queries";
 
 const schema = z.object({
-  productIds: z.array(z.string().uuid()).max(200),
+  productIds: z.array(z.string().uuid()).max(MAX_CART_LINES),
 });
 
 export async function POST(request: NextRequest) {
