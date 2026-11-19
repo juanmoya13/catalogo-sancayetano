@@ -1,9 +1,37 @@
-import Link from "next/link";
-import { InfiniteProductCatalog } from "@/features/products/components/InfiniteProductCatalog";
-import { getPublicProductPage } from "@/features/products/queries";
+import { ProductCatalog } from "@/features/products/components/ProductCatalog";
+import { getPublicCategories } from "@/features/categories/queries";
+import {
+  getPublicProductPage,
+  isPublicCategoryId,
+} from "@/features/products/queries";
+import { MAX_PUBLIC_SEARCH_LENGTH } from "@/features/products/constants";
 
-export default async function Home() {
-  const catalog = await getPublicProductPage(1);
+type HomeProps = {
+  searchParams: Promise<{
+    q?: string | string[];
+    category?: string | string[];
+    page?: string | string[];
+  }>;
+};
+
+function firstValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+export default async function Home({ searchParams }: HomeProps) {
+  const params = await searchParams;
+  const search = firstValue(params.q)?.trim().slice(0, MAX_PUBLIC_SEARCH_LENGTH) ?? "";
+  const rawCategoryId = firstValue(params.category);
+  const categoryId = rawCategoryId && isPublicCategoryId(rawCategoryId)
+    ? rawCategoryId
+    : "";
+  const parsedPage = Number(firstValue(params.page));
+  const page = Number.isSafeInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+
+  const [catalog, categories] = await Promise.all([
+    getPublicProductPage(page, undefined, { search, categoryId: categoryId || undefined }),
+    getPublicCategories(),
+  ]);
 
   return (
     <main className="catalog-shell">
@@ -12,22 +40,15 @@ export default async function Home() {
         <h1>Catálogo</h1>
       </header>
 
-      {catalog.products.length === 0 ? (
-        <section className="catalog-state">
-          <h2>Sin productos disponibles</h2>
-          <p>Por el momento no hay productos activos publicados.</p>
-          <Link className="catalog-button" href="/">
-            Volver al inicio
-          </Link>
-        </section>
-      ) : (
-        <InfiniteProductCatalog
-          initialProducts={catalog.products}
-          initialHasMore={catalog.page < catalog.totalPages}
-          initialPage={catalog.page}
-          total={catalog.total}
-        />
-      )}
+      <ProductCatalog
+        categories={categories}
+        initialCategoryId={categoryId}
+        initialPage={catalog.page}
+        initialProducts={catalog.products}
+        initialSearch={search}
+        initialTotal={catalog.total}
+        initialTotalPages={catalog.totalPages}
+      />
     </main>
   );
 }

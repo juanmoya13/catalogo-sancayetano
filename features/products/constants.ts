@@ -1,0 +1,1 @@
+export const MAX_PUBLIC_SEARCH_LENGTH = 100;

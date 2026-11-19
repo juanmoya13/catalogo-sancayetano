@@ -1,3 +1,4 @@
+import { AddToCart } from "@/features/cart/components/AddToCart";
 import type { PublicProduct } from "../types";
 
 const currencyFormatter = new Intl.NumberFormat("es-AR", {
@@ -19,6 +20,7 @@ export function ProductCard({ product }: { product: PublicProduct }) {
         <strong>{currencyFormatter.format(price)}</strong>
         <span>{product.sale_unit === "kg" ? "por kg" : "por unidad"}</span>
       </div>
+      <AddToCart productId={product.id} saleUnit={product.sale_unit} />
     </article>
   );
 }

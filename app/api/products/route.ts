@@ -1,31 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   getPublicProductPage,
+  isPublicCategoryId,
   PUBLIC_PRODUCT_PAGE_SIZE,
 } from "@/features/products/queries";
+import { MAX_PUBLIC_SEARCH_LENGTH } from "@/features/products/constants";
 
 export async function GET(request: NextRequest) {
   const rawPage = request.nextUrl.searchParams.get("page") ?? "1";
   const parsedPage = Number(rawPage);
+  const search = request.nextUrl.searchParams.get("q") ?? "";
+  const rawCategoryId = request.nextUrl.searchParams.get("category") ?? "";
 
-  if (!/^\d+$/.test(rawPage) || parsedPage < 1) {
+  if (
+    !/^\d+$/.test(rawPage) ||
+    !Number.isSafeInteger(parsedPage) ||
+    parsedPage < 1 ||
+    search.length > MAX_PUBLIC_SEARCH_LENGTH ||
+    (rawCategoryId && !isPublicCategoryId(rawCategoryId))
+  ) {
     return NextResponse.json(
-      { error: "La página indicada no es válida." },
+      { error: "Los filtros o la página indicados no son válidos." },
       { status: 400 },
     );
   }
 
   try {
-    const catalog = await getPublicProductPage(parsedPage);
+    const catalog = await getPublicProductPage(parsedPage, PUBLIC_PRODUCT_PAGE_SIZE, {
+      search,
+      categoryId: rawCategoryId || undefined,
+    });
 
     return NextResponse.json(
-      {
-        products: catalog.products,
-        page: catalog.page,
-        pageSize: PUBLIC_PRODUCT_PAGE_SIZE,
-        total: catalog.total,
-        hasMore: catalog.page < catalog.totalPages,
-      },
+      catalog,
       {
         headers: {
           "Cache-Control": "no-store",

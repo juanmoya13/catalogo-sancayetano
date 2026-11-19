@@ -13,14 +13,6 @@ export type PublicProductPage = {
   totalPages: number;
 };
 
-export type PublicProductBatch = {
-  products: PublicProduct[];
-  page: number;
-  pageSize: number;
-  total: number;
-  hasMore: boolean;
-};
-
 export type ProductActionState = {
   status: "idle" | "success" | "error";
   message: string;
