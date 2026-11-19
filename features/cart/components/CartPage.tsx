@@ -29,8 +29,6 @@ export function CartPage() {
   const [isPreparing, setIsPreparing] = useState(false);
   const [preparedOrder, setPreparedOrder] = useState<PreparedOrder | null>(null);
   const [checkoutMessage, setCheckoutMessage] = useState("");
-  const [showOrderText, setShowOrderText] = useState(false);
-  const [copyMessage, setCopyMessage] = useState("");
   const previousPrices = useRef<Map<string, number>>(new Map());
 
   /* eslint-disable react-hooks/set-state-in-effect */
@@ -105,7 +103,6 @@ export function CartPage() {
     setIsPreparing(true);
     setPreparedOrder(null);
     setCheckoutMessage("");
-    setCopyMessage("");
 
     try {
       const response = await fetch("/api/checkout/prepare", {
@@ -170,22 +167,9 @@ export function CartPage() {
     }
   }
 
-  async function copyOrderMessage() {
-    if (!preparedOrder) return;
-
-    try {
-      await navigator.clipboard.writeText(preparedOrder.message);
-      setCopyMessage("Detalle copiado.");
-    } catch {
-      setShowOrderText(true);
-      setCopyMessage("No se pudo acceder al portapapeles. Seleccioná el detalle y copialo manualmente.");
-    }
-  }
-
   function invalidatePreparedOrder() {
     setPreparedOrder(null);
     setCheckoutMessage("");
-    setCopyMessage("");
   }
 
   function refreshCartProducts() {
@@ -302,31 +286,18 @@ export function CartPage() {
         </section>
 
         <aside className="cart-summary">
-          <p>Importes estimativos</p>
+          <p>Total estimativo</p>
           <strong>{currencyFormatter.format(total)}</strong>
-          <span>
-            El peso finalmente preparado puede diferir y el supermercado deberá confirmar el pedido y el importe por WhatsApp.
-          </span>
+          <span>Los precios pueden cambiar y el peso preparado puede variar. El supermercado confirma el importe por WhatsApp.</span>
           <button className="catalog-button" onClick={() => setRefresh((value) => value + 1)} type="button">
             Actualizar precios y disponibilidad
           </button>
           {preparedOrder ? (
             <section className="cart-prepared-order" aria-live="polite">
-              <p>Pedido preparado con precios vigentes. El total estimado es {currencyFormatter.format(preparedOrder.total)}.</p>
               <a className="catalog-button" href={preparedOrder.whatsappUrl} rel="noreferrer" target="_blank">
                 Abrir WhatsApp
               </a>
-              <button className="cart-secondary-button" onClick={copyOrderMessage} type="button">
-                Copiar detalle
-              </button>
-              {copyMessage && <p role="status">{copyMessage}</p>}
-              {showOrderText && (
-                <label className="cart-order-text">
-                  <span>Detalle para copiar</span>
-                  <textarea readOnly value={preparedOrder.message} />
-                </label>
-              )}
-              <p>WhatsApp no envía ni confirma el pedido automáticamente. Revisá el mensaje y envialo desde la aplicación.</p>
+              <p>El peso finalmente preparado puede diferir y el supermercado deberá confirmar el pedido y el importe por WhatsApp.</p>
             </section>
           ) : (
             <button

@@ -66,6 +66,11 @@ El script usa identificadores fijos y `on conflict`, por lo que puede volver a e
 - `npm run typecheck`: chequeo TypeScript.
 - `npm run build`: build de producción.
 - `npm run start`: servidor de producción local.
+- `npm test`: pruebas unitarias.
+- `npm run test:integration`: pruebas de RLS/CRUD contra un proyecto Supabase Cloud de desarrollo configurado explícitamente.
+- `npm run test:e2e`: pruebas Playwright de escritorio y móvil contra el proyecto de desarrollo.
+
+Consultar [Operación y puesta en producción](docs/operaciones.md) para el flujo de CI, barreras de pruebas, backups, migraciones y smoke test. No ejecutar pruebas de integración o E2E contra producción.
 
 ## Estructura inicial
 
