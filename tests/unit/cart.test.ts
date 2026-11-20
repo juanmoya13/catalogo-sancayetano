@@ -109,6 +109,7 @@ describe("WhatsApp order message", () => {
 
     expect(message).toContain("2 unidades");
     expect(message).toContain("450 gramos");
+    expect(message).not.toContain("Subtotal estimado");
     expect(message).toContain("Total estimado");
     expect(message).toContain("sujetos a confirmación");
     expect(url.hostname).toBe("wa.me");

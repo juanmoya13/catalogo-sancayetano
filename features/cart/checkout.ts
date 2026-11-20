@@ -51,7 +51,6 @@ export function buildOrderMessage(
       `- ${line.name}`,
       `  Cantidad: ${quantityLabel}`,
       `  Precio: ${currencyFormatter.format(Number(line.price))} ${unitLabel}`,
-      `  Subtotal estimado: ${currencyFormatter.format(line.subtotal)}`,
     ].join("\n");
   });
 
