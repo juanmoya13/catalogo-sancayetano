@@ -11,12 +11,13 @@ import {
 } from "react";
 import {
   addCartItem,
+  calculateCartItemCount,
   createEmptyCart,
   removeCartItem,
   updateCartItemQuantity,
 } from "./domain";
 import { readCart, writeCart } from "./storage";
-import type { Cart, SaleUnit } from "./types";
+import type { Cart, CartProduct, SaleUnit } from "./types";
 
 type CartContextValue = {
   cart: Cart;
@@ -42,6 +43,50 @@ export function CartProvider({ children }: { children: ReactNode }) {
   /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
+    if (!isHydrated) return;
+
+    const legacyProductIds = cart.items
+      .filter((item) => !item.saleUnit)
+      .map((item) => item.productId);
+    if (legacyProductIds.length === 0) return;
+
+    const controller = new AbortController();
+    fetch("/api/cart/products", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productIds: legacyProductIds }),
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("No se pudo migrar la modalidad del carrito.");
+        return await response.json() as { products: CartProduct[] };
+      })
+      .then(({ products }) => {
+        const saleUnits = new Map(products.flatMap((product) =>
+          product.availability === "available"
+            ? [[product.id, product.sale_unit] as const]
+            : [],
+        ));
+        setCart((current) => {
+          let changed = false;
+          const items = current.items.map((item) => {
+            const saleUnit = saleUnits.get(item.productId);
+            if (!item.saleUnit && saleUnit) {
+              changed = true;
+              return { ...item, saleUnit };
+            }
+            return item;
+          });
+          return changed ? { ...current, items } : current;
+        });
+      })
+      .catch(() => undefined);
+
+    return () => controller.abort();
+  }, [cart.items, isHydrated]);
+
+  useEffect(() => {
     if (isHydrated) writeCart(cart);
   }, [cart, isHydrated]);
 
@@ -54,7 +99,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const max = saleUnit === "unit" ? 999 : 100_000;
     if (quantity > max) return false;
 
-    commit(addCartItem(cart, productId, quantity));
+    commit(addCartItem(cart, productId, quantity, saleUnit));
     return true;
   }, [cart, commit]);
 
@@ -63,7 +108,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const max = saleUnit === "unit" ? 999 : 100_000;
     if (quantity > max) return false;
 
-    commit(updateCartItemQuantity(cart, productId, quantity));
+    commit(updateCartItemQuantity(cart, productId, quantity, saleUnit));
     return true;
   }, [cart, commit]);
 
@@ -82,7 +127,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setQuantity,
     removeItem,
     clearCart,
-    lineCount: cart.items.reduce((sum, item) => sum + item.quantity, 0),
+    lineCount: calculateCartItemCount(cart.items),
   }), [addItem, cart, clearCart, isHydrated, removeItem, setQuantity]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

@@ -27,7 +27,6 @@ export function CartPage() {
   const [refresh, setRefresh] = useState(0);
   const [hasPriceChanges, setHasPriceChanges] = useState(false);
   const [isPreparing, setIsPreparing] = useState(false);
-  const [preparedOrder, setPreparedOrder] = useState<PreparedOrder | null>(null);
   const [checkoutMessage, setCheckoutMessage] = useState("");
   const previousPrices = useRef<Map<string, number>>(new Map());
 
@@ -99,16 +98,25 @@ export function CartPage() {
   const total = useMemo(() => calculateCartTotal(lines), [lines]);
   const unavailableCount = lines.filter((line) => !line.product).length;
 
-  async function prepareOrder() {
+  async function sendOrder() {
+    const whatsappTab = window.open("about:blank", "_blank");
+    if (!whatsappTab) {
+      setCheckoutMessage("Permití las ventanas emergentes para abrir WhatsApp.");
+      return;
+    }
+    whatsappTab.opener = null;
+
     setIsPreparing(true);
-    setPreparedOrder(null);
     setCheckoutMessage("");
+    let orderSent = false;
 
     try {
       const response = await fetch("/api/checkout/prepare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: cart.items }),
+        body: JSON.stringify({
+          items: cart.items.map(({ productId, quantity }) => ({ productId, quantity })),
+        }),
         cache: "no-store",
       });
       const data = await response.json() as Partial<PreparedOrder> & {
@@ -156,34 +164,35 @@ export function CartPage() {
         availability: "available" as const,
       }]));
       setProducts((current) => current.map((product) => updatedProducts.get(product.id) ?? product));
-      setPreparedOrder(data as PreparedOrder);
       setCheckoutMessage("");
+      whatsappTab.location.href = data.whatsappUrl;
+      orderSent = true;
     } catch (error) {
       setCheckoutMessage(error instanceof Error
         ? error.message
         : "No se pudo preparar el pedido. Revisá tu conexión e intentá nuevamente.");
     } finally {
+      if (!orderSent && !whatsappTab.closed) whatsappTab.close();
       setIsPreparing(false);
     }
   }
 
-  function invalidatePreparedOrder() {
-    setPreparedOrder(null);
+  function clearCheckoutMessage() {
     setCheckoutMessage("");
   }
 
   function refreshCartProducts() {
-    invalidatePreparedOrder();
+    clearCheckoutMessage();
     setRefresh((value) => value + 1);
   }
 
   function removeCartLine(productId: string) {
-    invalidatePreparedOrder();
+    clearCheckoutMessage();
     removeItem(productId);
   }
 
   function clearCartAndOrder() {
-    invalidatePreparedOrder();
+    clearCheckoutMessage();
     clearCart();
   }
 
@@ -247,7 +256,7 @@ export function CartPage() {
             const onQuantityChange = (raw: string) => {
               const quantity = Number(raw);
               if (isQuantityValid(quantity, product.sale_unit)) {
-                invalidatePreparedOrder();
+                clearCheckoutMessage();
                 setQuantity(item.productId, quantity, product.sale_unit);
               }
             };
@@ -289,26 +298,14 @@ export function CartPage() {
           <p>Total estimativo</p>
           <strong>{currencyFormatter.format(total)}</strong>
           <span>Los precios pueden cambiar y el peso preparado puede variar. El supermercado confirma el importe por WhatsApp.</span>
-          <button className="catalog-button" onClick={() => setRefresh((value) => value + 1)} type="button">
-            Actualizar precios y disponibilidad
+          <button
+            className="catalog-button"
+            disabled={isPreparing || isLoading || hasError || unavailableCount > 0}
+            onClick={sendOrder}
+            type="button"
+          >
+            {isPreparing ? "Enviando…" : "Enviar pedido"}
           </button>
-          {preparedOrder ? (
-            <section className="cart-prepared-order" aria-live="polite">
-              <a className="catalog-button" href={preparedOrder.whatsappUrl} rel="noreferrer" target="_blank">
-                Abrir WhatsApp
-              </a>
-              <p>El peso finalmente preparado puede diferir y el supermercado deberá confirmar el pedido y el importe por WhatsApp.</p>
-            </section>
-          ) : (
-            <button
-              className="catalog-button"
-              disabled={isPreparing || isLoading || hasError || unavailableCount > 0}
-              onClick={prepareOrder}
-              type="button"
-            >
-              {isPreparing ? "Preparando…" : "Preparar pedido"}
-            </button>
-          )}
           {checkoutMessage && <p className="cart-checkout-message" role="alert">{checkoutMessage}</p>}
           <button className="cart-clear" disabled={isPreparing} onClick={clearCartAndOrder} type="button">Vaciar carrito</button>
         </aside>

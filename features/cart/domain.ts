@@ -1,25 +1,28 @@
-import { MAX_UNIT_QUANTITY, MAX_WEIGHT_GRAMS } from "./constants";
+import { CART_VERSION, MAX_UNIT_QUANTITY, MAX_WEIGHT_GRAMS } from "./constants";
 import type { AvailableCartProduct, Cart, CartItem, SaleUnit } from "./types";
 
 export function createEmptyCart(): Cart {
-  return { version: 1, items: [] };
+  return { version: CART_VERSION, items: [] };
 }
 
 export function normalizeCartItems(items: CartItem[]): CartItem[] {
-  const quantities = new Map<string, number>();
+  const normalized = new Map<string, CartItem>();
 
   for (const item of items) {
     if (!item || typeof item.productId !== "string") continue;
     if (!Number.isSafeInteger(item.quantity) || item.quantity <= 0) continue;
 
-    const current = quantities.get(item.productId) ?? 0;
-    quantities.set(item.productId, current + item.quantity);
+    const current = normalized.get(item.productId);
+    normalized.set(item.productId, {
+      productId: item.productId,
+      quantity: (current?.quantity ?? 0) + item.quantity,
+      ...(item.saleUnit ? { saleUnit: item.saleUnit } : current?.saleUnit ? { saleUnit: current.saleUnit } : {}),
+    });
   }
 
-  return Array.from(quantities, ([productId, quantity]) => ({
-    productId,
-    quantity,
-  })).filter((item) => Number.isSafeInteger(item.quantity) && item.quantity > 0);
+  return Array.from(normalized.values()).filter(
+    (item) => Number.isSafeInteger(item.quantity) && item.quantity > 0,
+  );
 }
 
 export function parseCart(raw: string | null): Cart {
@@ -29,8 +32,8 @@ export function parseCart(raw: string | null): Cart {
     const value = JSON.parse(raw) as unknown;
     if (!value || typeof value !== "object") return createEmptyCart();
 
-    const candidate = value as Partial<Cart>;
-    if (candidate.version !== 1 || !Array.isArray(candidate.items)) {
+    const candidate = value as { version?: unknown; items?: unknown };
+    if ((candidate.version !== 1 && candidate.version !== CART_VERSION) || !Array.isArray(candidate.items)) {
       return createEmptyCart();
     }
 
@@ -39,39 +42,40 @@ export function parseCart(raw: string | null): Cart {
       const cartItem = item as Partial<CartItem>;
       return typeof cartItem.productId === "string" &&
         Number.isSafeInteger(cartItem.quantity) &&
-        (cartItem.quantity ?? 0) > 0;
+        (cartItem.quantity ?? 0) > 0 &&
+        (cartItem.saleUnit === undefined || cartItem.saleUnit === "unit" || cartItem.saleUnit === "kg");
     });
 
-    return { version: 1, items: normalizeCartItems(items) };
+    return { version: CART_VERSION, items: normalizeCartItems(items) };
   } catch {
     return createEmptyCart();
   }
 }
 
-export function addCartItem(cart: Cart, productId: string, quantity: number): Cart {
+export function addCartItem(cart: Cart, productId: string, quantity: number, saleUnit: SaleUnit): Cart {
   return {
-    version: 1,
+    version: CART_VERSION,
     items: normalizeCartItems([
       ...cart.items,
-      { productId, quantity },
+      { productId, quantity, saleUnit },
     ]),
   };
 }
 
-export function updateCartItemQuantity(cart: Cart, productId: string, quantity: number): Cart {
+export function updateCartItemQuantity(cart: Cart, productId: string, quantity: number, saleUnit: SaleUnit): Cart {
   if (!Number.isSafeInteger(quantity) || quantity <= 0) return cart;
 
   return {
-    version: 1,
+    version: CART_VERSION,
     items: cart.items.map((item) =>
-      item.productId === productId ? { ...item, quantity } : item,
+      item.productId === productId ? { ...item, quantity, saleUnit } : item,
     ),
   };
 }
 
 export function removeCartItem(cart: Cart, productId: string): Cart {
   return {
-    version: 1,
+    version: CART_VERSION,
     items: cart.items.filter((item) => item.productId !== productId),
   };
 }
@@ -81,6 +85,10 @@ export function isQuantityValid(quantity: number, saleUnit: SaleUnit) {
   return saleUnit === "unit"
     ? quantity <= MAX_UNIT_QUANTITY
     : quantity <= MAX_WEIGHT_GRAMS;
+}
+
+export function calculateCartItemCount(items: CartItem[]) {
+  return items.reduce((count, item) => count + (item.saleUnit === "unit" ? item.quantity : 1), 0);
 }
 
 export function roundMoney(value: number) {

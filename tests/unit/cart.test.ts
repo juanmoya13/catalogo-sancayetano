@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addCartItem,
+  calculateCartItemCount,
   calculateCartTotal,
   calculateLineSubtotal,
   isQuantityValid,
@@ -39,27 +40,48 @@ describe("cart calculations", () => {
 
   it("combines repeated products and safely rejects invalid quantities", () => {
     const cart = addCartItem(
-      { version: 1, items: [{ productId: unitProduct.id, quantity: 2 }] },
+      { version: 2, items: [{ productId: unitProduct.id, quantity: 2, saleUnit: "unit" }] },
       unitProduct.id,
       3,
+      "unit",
     );
 
-    expect(cart.items).toEqual([{ productId: unitProduct.id, quantity: 5 }]);
+    expect(cart.items).toEqual([{ productId: unitProduct.id, quantity: 5, saleUnit: "unit" }]);
     expect(isQuantityValid(1, "unit")).toBe(true);
     expect(isQuantityValid(0, "kg")).toBe(false);
     expect(isQuantityValid(1.5, "unit")).toBe(false);
     expect(isQuantityValid(Number.MAX_SAFE_INTEGER + 1, "kg")).toBe(false);
   });
+
+  it("counts weight-based products as one cart article regardless of grams", () => {
+    expect(calculateCartItemCount([
+      { productId: weightProduct.id, quantity: 1000, saleUnit: "kg" },
+      { productId: unitProduct.id, quantity: 3, saleUnit: "unit" },
+    ])).toBe(4);
+  });
 });
 
 describe("cart persistence", () => {
   it("recovers malformed, incompatible, and invalid stored data as an empty cart", () => {
-    expect(parseCart("not-json")).toEqual({ version: 1, items: [] });
-    expect(parseCart(JSON.stringify({ version: 2, items: [] }))).toEqual({ version: 1, items: [] });
+    expect(parseCart("not-json")).toEqual({ version: 2, items: [] });
+    expect(parseCart(JSON.stringify({ version: 3, items: [] }))).toEqual({ version: 2, items: [] });
     expect(parseCart(JSON.stringify({
       version: 1,
       items: [{ productId: "bad", quantity: -1 }, { productId: "ok", quantity: 2 }],
-    }))).toEqual({ version: 1, items: [{ productId: "ok", quantity: 2 }] });
+    }))).toEqual({ version: 2, items: [{ productId: "ok", quantity: 2 }] });
+  });
+
+  it("migrates valid v1 cart data without losing quantity", () => {
+    const migratedCart = parseCart(JSON.stringify({
+      version: 1,
+      items: [{ productId: "legacy-product", quantity: 1000 }],
+    }));
+
+    expect(migratedCart).toEqual({
+      version: 2,
+      items: [{ productId: "legacy-product", quantity: 1000 }],
+    });
+    expect(calculateCartItemCount(migratedCart.items)).toBe(1);
   });
 });
 

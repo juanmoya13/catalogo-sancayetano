@@ -3,10 +3,11 @@ export type SaleUnit = "unit" | "kg";
 export type CartItem = {
   productId: string;
   quantity: number;
+  saleUnit?: SaleUnit;
 };
 
 export type Cart = {
-  version: 1;
+  version: 2;
   items: CartItem[];
 };
 

@@ -38,13 +38,33 @@ test("searches, filters, paginates, and keeps unit and weight items in the cart"
   await expect(page.getByRole("heading", { name: "Fideos tirabuzón 500 g" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Banana" })).toBeVisible();
   await expect(page.getByText("Total estimativo", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Preparar pedido" }).click();
-  const whatsappLink = page.getByRole("link", { name: "Abrir WhatsApp" });
-  await expect(whatsappLink).toBeVisible();
-  const whatsappUrl = new URL((await whatsappLink.getAttribute("href"))!);
-  expect(whatsappUrl.hostname).toBe("wa.me");
-  expect(whatsappUrl.searchParams.get("text")).toContain("Fideos tirabuzón 500 g");
-  expect(whatsappUrl.searchParams.get("text")).toContain("Total estimado");
+  await expect(page.getByRole("button", { name: "Actualizar precios y disponibilidad" })).toHaveCount(0);
+  const firstPopupPromise = page.waitForEvent("popup");
+  await page.getByRole("button", { name: "Enviar pedido" }).click();
+  const firstPopup = await firstPopupPromise;
+  await expect.poll(() => firstPopup.url()).toContain("wa.me");
+  const firstMessage = new URL(firstPopup.url()).searchParams.get("text") ?? "";
+  expect(firstMessage).toContain("Fideos tirabuzón 500 g");
+  expect(firstMessage).toContain("Total estimado");
+
+  await page.goto("/");
+  await page.getByRole("searchbox", { name: "Buscar por nombre" }).fill("Aceite de oliva");
+  const extraCard = page.locator("article.product-card").filter({
+    has: page.getByRole("heading", { name: "Aceite de oliva 500 ml" }),
+  });
+  await expect(extraCard).toBeVisible();
+  await extraCard.getByRole("button", { name: "Agregar" }).click();
+
+  await page.goto("/carrito");
+  await expect(page.getByRole("heading", { name: "Aceite de oliva 500 ml" })).toBeVisible();
+  const secondPopupPromise = page.waitForEvent("popup");
+  await page.getByRole("button", { name: "Enviar pedido" }).click();
+  const secondPopup = await secondPopupPromise;
+  await expect.poll(() => secondPopup.url()).toContain("wa.me");
+  const secondMessage = new URL(secondPopup.url()).searchParams.get("text") ?? "";
+  expect(secondMessage).toContain("Aceite de oliva 500 ml");
+  expect(secondMessage).toContain("Banana");
+  expect(secondMessage).toContain("Fideos tirabuzón 500 g");
 
   const viewport = await page.evaluate(() => ({
     width: document.documentElement.clientWidth,
@@ -101,7 +121,7 @@ test("admin price changes and deactivation update an existing cart", async ({ pa
 
     await page.goto("/carrito");
     await expect(page.getByText("Producto no disponible", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Preparar pedido" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "Enviar pedido" })).toBeDisabled();
   } finally {
     const cleanupClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

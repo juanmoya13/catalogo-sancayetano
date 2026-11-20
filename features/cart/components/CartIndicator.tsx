@@ -9,7 +9,7 @@ export function CartIndicator() {
   return (
     <Link className="cart-indicator" href="/carrito">
       Carrito
-      {isHydrated ? <span aria-label={`${lineCount} unidades o gramos en el carrito`}>{lineCount}</span> : null}
+      {isHydrated ? <span aria-label={`${lineCount} artículos en el carrito`}>{lineCount}</span> : null}
     </Link>
   );
 }
